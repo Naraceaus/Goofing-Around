@@ -1,0 +1,167 @@
+<html>
+	<body>
+		<div id='test-speedo'>		
+			<speedo v-bind:measurements='statistics'>
+
+			</speedo>
+			<div>
+					<label>Danger Level</label>
+					<br>
+					<input type="range" min="1" max="1000" v-model="statistics.danger_mark"><input type="text" v-model="statistics.danger_mark">
+			</div>
+			<div>
+					<label>Warning Level</label>
+					<br>
+					<input type="range" min="1" max="1000" v-model="statistics.warning_mark" id="warning_mark"><input type="text" v-model="statistics.warning_mark">
+			</div>
+			<div>
+					<label>Measured Level</label>
+					<br>
+					<input type="range" min="1" max="1000" v-model="statistics.measured" id="measured"><input type="text" v-model="statistics.measured">
+			</div>
+
+		</div>
+	</body>
+	<footer>
+		<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+		<script>
+		function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+		var angleInRadians = (angleInDegrees-90) * Math.PI / 180.0;
+
+		return {
+			x: centerX + (radius * Math.cos(angleInRadians)),
+			y: centerY + (radius * Math.sin(angleInRadians))
+		};
+		}
+
+		function describeArc(x, y, radius, startAngle, endAngle){
+
+			var start = polarToCartesian(x, y, radius, endAngle);
+			var end = polarToCartesian(x, y, radius, startAngle);
+
+			var largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+
+			var d = [
+				"M", start.x, start.y, 
+				"A", radius, radius, 0, largeArcFlag, 0, end.x, end.y
+			].join(" ");
+
+			return d;       
+		}
+
+
+			Vue.component('speedo', {
+				props:['measurements'],
+				computed: {
+					section1:function() {
+						var sect_measure = {
+							start:this.measurements.minimum,
+							end:this.measurements.danger_mark,
+							maximum:this.measurements.maximum,
+							stroke:'red',
+							fill:'red'
+						}
+						return sect_measure;
+					},
+					section2:function() {
+						var sect_measure = {
+							start:this.measurements.danger_mark,
+							end:this.measurements.warning_mark,
+							maximum:this.measurements.maximum,
+							stroke:'orange',
+							fill:'orange'
+						}
+						return sect_measure;
+					},
+					section3:function() {
+						var sect_measure = {
+							start:this.measurements.warning_mark,
+							end:this.measurements.maximum,
+							maximum:this.measurements.maximum,
+							stroke:'limegreen',
+							fill:'limegreen'
+						}
+						return sect_measure;						
+					},
+					needle:function() {
+						var needle_measure = {
+							minimum:this.measurements.minimum,
+							maximum:this.measurements.maximum,
+							measured: this.measurements.measured,
+							stroke:'black',
+							fill:'white'
+						}
+						return needle_measure;	
+					}
+
+				},
+				template:`
+					<svg height="110" width="200" style="background:black">
+						<path d="M 200 100 A -100 -100 0 0 0 0 100 L 200 100" stroke="grey" fill="green"></path>
+						<angle v-bind:measurements="section1"></angle>
+						<angle v-bind:measurements="section2"></angle>
+						<angle v-bind:measurements="section3"></angle>
+						<needle v-bind:measurements="needle"></needle>
+					</svg>
+				`
+			});
+			Vue.component('angle', {
+				data: function() {
+					return {
+						arc_start_adjust:270
+					}
+				},
+				props:['measurements'],
+				computed:{
+					arcDescription: function() {
+						console.log(this.measurements);
+						console.log(this.$parent)
+						console.log(this.$parent.measurements)
+						var start_angle = this.arc_start_adjust+(this.measurements.start/this.measurements.maximum)*180
+						var end_angle = this.arc_start_adjust+(this.measurements.end/this.measurements.maximum)*180;
+						console.log(100, 100, 100, start_angle, end_angle);
+						var arc_string = "";
+						//inital arc
+						arc_string = describeArc(100, 100, 100, start_angle, end_angle);
+						// line from end of arc to center
+						arc_string += " L 100 100";
+						return arc_string;
+					}
+
+				},
+				template: `
+					<path v-bind:d="arcDescription" v-bind:stroke="measurements.stroke" v-bind:fill="measurements.fill"></path>
+
+				`
+			});
+			Vue.component('needle', {
+				props:['measurements'],
+				computed:{
+					rotateText: function() {
+						var rot_deg = this.measurements.measured/(this.measurements.maximum-this.measurements.minimum)*180;
+						var rot_string = "rotate("+rot_deg+" 100, 100)";
+						return rot_string;
+					}
+				},
+				template:`
+					<path d="M 100 110 A 10 10 0 0 0 100 90 L 10 100 L 100 110" v-bind:transform="rotateText" v-bind:stroke="measurements.stroke" v-bind:fill="measurements.fill"></path>
+				`
+			});
+			
+			var test_speedo =new Vue({
+			el: '#test-speedo',
+				data: {
+					statistics: {
+						minimum: 0,
+						maximum: 1000,
+						danger_mark: 333.333,
+						warning_mark: 666.666,
+						measured: 623
+					}
+				}
+			});
+			
+		</script>
+	</footer>
+</html>
