@@ -33,19 +33,23 @@
 			<div>
 				<label>Outer Arc Size (percentage)</label>
 				<br>
-				<input type="range" min="0" max="1" step="0.001" v-model="attributes.radial_size"><input readonly type="text" v-model="attributes.radial_size">
+				<input type="range" min="0" max="1" step="0.001" v-model="attributes.radial_size"><input disabled type="text" v-model="attributes.radial_size">
 			</div>
 			<div>
 				<label>Inner Arc Size (percentage)</label>
 				<br>
-				<input type="range" min="0" max="1" step="0.001" v-model="attributes.inner_rad_size"><input readonly type="text" v-model="attributes.inner_rad_size">
+				<input type="range" min="0" max="1" step="0.001" v-model="attributes.inner_rad_size"><input disabled type="text" v-model="attributes.inner_rad_size">
 			</div>
 			<div>
 				<label>Overall width</label>
 				<br>
-				<input type="range" min="0" max="500" v-model="attributes.width"><input readonly type="text" v-model="attributes.width">
+				<input type="range" min="0" max="500" v-model="attributes.width"><input type="text" v-model="attributes.width">
 			</div>
-
+			<div>
+				<label>Number of sections</label>
+				<br>
+				<input type="range" min="0" max="20" v-model="attributes.num_intervals"><input type="text" v-model="attributes.num_intervals">
+			</div>
 		</div>
 	</body>
 	<footer>
