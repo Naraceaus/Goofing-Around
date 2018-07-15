@@ -1,23 +1,49 @@
 <html>
 	<body>
 		<div id='test-speedo'>		
-			<speedo v-bind:measurements='statistics'>
+			<speedo v-bind:attributes='attributes'>
 
 			</speedo>
+
 			<div>
-					<label>Danger Level</label>
+					<label>Minimum</label>
 					<br>
-					<input type="range" min="1" max="1000" v-model="statistics.danger_mark"><input type="text" v-model="statistics.danger_mark">
+					<input type="number" v-model="attributes.minimum">
+			</div>
+			<div>
+				<label>Maximum</label>
+				<br>
+				<input type="number" v-model="attributes.maximum">
+			</div>
+			<div>
+			<label>Danger Level</label>
+			<br>
+			<input type="range" v-bind:min="attributes.minimum" v-bind:max="attributes.maximum" step="0.001" v-model="attributes.danger_mark"><input type="text" v-model="attributes.danger_mark">
 			</div>
 			<div>
 					<label>Warning Level</label>
 					<br>
-					<input type="range" min="1" max="1000" v-model="statistics.warning_mark" id="warning_mark"><input type="text" v-model="statistics.warning_mark">
+					<input type="range" v-bind:min="attributes.minimum" v-bind:max="attributes.maximum" step="0.001" v-model="attributes.warning_mark"><input type="text" v-model="attributes.warning_mark">
 			</div>
 			<div>
 					<label>Measured Level</label>
 					<br>
-					<input type="range" min="1" max="1000" v-model="statistics.measured" id="measured"><input type="text" v-model="statistics.measured">
+					<input type="range" v-bind:min="attributes.minimum" v-bind:max="attributes.maximum" step="0.001" v-model="attributes.measured"><input type="text" v-model="attributes.measured">
+			</div>
+			<div>
+				<label>Outer Arc Size (percentage)</label>
+				<br>
+				<input type="range" min="0" max="1" step="0.001" v-model="attributes.radial_size"><input readonly type="text" v-model="attributes.radial_size">
+			</div>
+			<div>
+				<label>Inner Arc Size (percentage)</label>
+				<br>
+				<input type="range" min="0" max="1" step="0.001" v-model="attributes.inner_rad_size"><input readonly type="text" v-model="attributes.inner_rad_size">
+			</div>
+			<div>
+				<label>Overall width</label>
+				<br>
+				<input type="range" min="0" max="500" v-model="attributes.width"><input readonly type="text" v-model="attributes.width">
 			</div>
 
 		</div>
@@ -52,57 +78,124 @@
 
 
 			Vue.component('speedo', {
-				props:['measurements'],
+				props:['attributes'],
 				computed: {
 					section1:function() {
 						var sect_measure = {
-							start:this.measurements.minimum,
-							end:this.measurements.danger_mark,
-							maximum:this.measurements.maximum,
-							stroke:'red',
+							start:this.attributes.minimum,
+							end:this.attributes.danger_mark,
+							stroke:'none',
 							fill:'red'
 						}
 						return sect_measure;
 					},
 					section2:function() {
 						var sect_measure = {
-							start:this.measurements.danger_mark,
-							end:this.measurements.warning_mark,
-							maximum:this.measurements.maximum,
-							stroke:'orange',
+							start:this.attributes.danger_mark,
+							end:this.attributes.warning_mark,
+							stroke:'none',
 							fill:'orange'
 						}
 						return sect_measure;
 					},
 					section3:function() {
 						var sect_measure = {
-							start:this.measurements.warning_mark,
-							end:this.measurements.maximum,
-							maximum:this.measurements.maximum,
-							stroke:'limegreen',
+							start:this.attributes.warning_mark,
+							end:this.attributes.maximum,
+							stroke:'none',
 							fill:'limegreen'
 						}
 						return sect_measure;						
 					},
 					needle:function() {
 						var needle_measure = {
-							minimum:this.measurements.minimum,
-							maximum:this.measurements.maximum,
-							measured: this.measurements.measured,
+							measured: this.attributes.measured,
 							stroke:'black',
 							fill:'white'
 						}
 						return needle_measure;	
+					},
+					splits:function() {
+						var splits=[];
+						var split_increment = (this.attributes.maximum -this.attributes.minimum)/this.attributes.num_intervals;
+						// start at 1 since 0 no need indicator
+						// +1 to end for last label
+						for (var si= 1; si <= this.attributes.num_intervals; si++) {
+							splits.push({
+								minimum: this.attributes.minimum,
+								maximum: this.attributes.maximum,
+								level: this.attributes.minimum+split_increment*si,
+								stroke: "white"
+							})
+						}
+						return splits;
+					},
+					// height of radius is half the width, add 10 percent either side for labels and values below
+					autoHeight: function() {
+						return 1.2*this.attributes.width/2;
+					},
+					outerRadialRadius: function() {
+						return (this.attributes.width*this.attributes.radial_size)/2
+					},
+					innerRadialRadius: function() {
+						return (this.attributes.width*this.attributes.inner_rad_size)/2
+					},
+					radialCenter: function() {
+						return {
+							x:this.attributes.width/2,
+							y:this.autoHeight/1.2
+						}
+					},
+					outerRadialMargin: function() {
+						return (this.attributes.width-this.attributes.width*this.attributes.radial_size)/2
+					},
+					innerRadialMargin: function() {
+						return (this.attributes.width-this.attributes.width*this.attributes.inner_rad_size)/2
+					},
+					outerRadialOutline: function() {
+						// move to
+						path_text = "M ";
+						//raight end of radial
+						path_text += parseFloat(this.attributes.width-this.outerRadialMargin)+" ";
+						path_text += this.radialCenter.y+" ";
+						//arc to left of radial
+						path_text += "A -"+this.outerRadialRadius+" -"+this.outerRadialRadius+" ";
+						path_text += "0 0 0 ";
+						path_text += this.outerRadialMargin+" "+this.radialCenter.y+" ";
+						// straight line back to right
+						path_text += "L "+parseFloat(this.attributes.width-this.outerRadialMargin)+" "+this.radialCenter.y;
+						return path_text;	
+					},
+					innerRadialOutline: function() {
+						var inner_scale=(1/this.attributes.radial_size)*this.attributes.inner_rad_size;
+						// move to
+						path_text = "M ";
+						//raight end of radial
+						path_text += parseFloat(this.attributes.width-this.innerRadialMargin)+" ";
+						path_text += this.radialCenter.y+" ";
+						//arc to left of radial
+						path_text += "A -"+this.innerRadialRadius+" -"+this.innerRadialRadius+" ";
+						path_text += "0 0 0 ";
+						path_text += this.innerRadialMargin+" "+this.radialCenter.y+" ";
+						// straight line back to right
+							path_text += "L "+parseFloat(this.attributes.width-this.innerRadialMargin)+" "+this.radialCenter.y;
+						return path_text;	
 					}
 
 				},
 				template:`
-					<svg height="110" width="200" style="background:black">
-						<path d="M 200 100 A -100 -100 0 0 0 0 100 L 200 100" stroke="grey" fill="green"></path>
-						<angle v-bind:measurements="section1"></angle>
-						<angle v-bind:measurements="section2"></angle>
-						<angle v-bind:measurements="section3"></angle>
-						<needle v-bind:measurements="needle"></needle>
+					<svg v-bind:height="autoHeight" v-bind:width="attributes.width" style="background:white">
+						<path v-bind:d="outerRadialOutline" stroke="none" fill="green"></path>
+						<angle v-bind:attributes="section1"></angle>
+						<angle v-bind:attributes="section2"></angle>
+						<angle v-bind:attributes="section3"></angle>
+
+						<divider v-for="split in splits" v-bind:attributes="split"></divider>
+							<!-- <path d="M 180 100 A -80 -80 0 0 0 20 100 L 200 100" stroke="white" fill="white"></path>-->
+
+						<path v-bind:d="innerRadialOutline" stroke="none" fill="white"></path>
+
+						<needle v-bind:attributes="needle"></needle>
 					</svg>
 				`
 			});
@@ -112,52 +205,107 @@
 						arc_start_adjust:270
 					}
 				},
-				props:['measurements'],
+				props:['attributes'],
 				computed:{
 					arcDescription: function() {
-						console.log(this.measurements);
-						console.log(this.$parent)
-						console.log(this.$parent.measurements)
-						var start_angle = this.arc_start_adjust+(this.measurements.start/this.measurements.maximum)*180
-						var end_angle = this.arc_start_adjust+(this.measurements.end/this.measurements.maximum)*180;
-						console.log(100, 100, 100, start_angle, end_angle);
+						var start_angle = this.arc_start_adjust+((this.attributes.start-this.$parent.attributes.minimum)/(this.$parent.attributes.maximum-this.$parent.attributes.minimum))*180;
+						var end_angle = this.arc_start_adjust+((this.attributes.end-this.$parent.attributes.minimum)/(this.$parent.attributes.maximum-this.$parent.attributes.minimum))*180;
 						var arc_string = "";
 						//inital arc
-						arc_string = describeArc(100, 100, 100, start_angle, end_angle);
+						arc_string = describeArc(this.$parent.radialCenter.x, this.$parent.radialCenter.y, this.$parent.outerRadialRadius, start_angle, end_angle);
 						// line from end of arc to center
-						arc_string += " L 100 100";
+						arc_string += " L "+this.$parent.radialCenter.x+" "+this.$parent.radialCenter.y+" ";;
 						return arc_string;
 					}
 
 				},
 				template: `
-					<path v-bind:d="arcDescription" v-bind:stroke="measurements.stroke" v-bind:fill="measurements.fill"></path>
+					<path v-bind:d="arcDescription" v-bind:stroke="attributes.stroke" v-bind:fill="attributes.fill" stroke-width="0"></path>
 
 				`
 			});
-			Vue.component('needle', {
-				props:['measurements'],
-				computed:{
+			Vue.component('divider', {
+				props:['attributes'],
+				computed: {
 					rotateText: function() {
-						var rot_deg = this.measurements.measured/(this.measurements.maximum-this.measurements.minimum)*180;
-						var rot_string = "rotate("+rot_deg+" 100, 100)";
+						var rot_deg = ((this.attributes.level-this.$parent.attributes.minimum)/(this.$parent.attributes.maximum-this.$parent.attributes.minimum))*180;
+						var rot_string = "rotate("+parseFloat(rot_deg-90)+" "+this.$parent.radialCenter.x+" "+this.$parent.radialCenter.y+")";
 						return rot_string;
+					},
+					x1: function() {
+						return this.$parent.radialCenter.x;
+					},
+					y1: function() {
+						return this.$parent.radialCenter.y;
+					},
+					x2: function() {
+						return this.$parent.radialCenter.x;
+					},
+					y2: function() {
+						return this.$parent.radialCenter.y-this.$parent.outerRadialRadius;
+					},
+					levelRounded: function() {
+						console.log(this.attributes.level)
+						return Number.parseFloat(this.attributes.level.toFixed(3))
+					},
+					textX: function() {
+						return this.$parent.radialCenter.x;
+					},
+					textY: function() {
+						return this.$parent.outerRadialMargin/1.5;
+					},
+					fontSize: function() {
+						return 'font-size:'+parseInt(this.$parent.outerRadialMargin/3)+'px';
 					}
+					
 				},
 				template:`
-					<path d="M 100 110 A 10 10 0 0 0 100 90 L 10 100 L 100 110" v-bind:transform="rotateText" v-bind:stroke="measurements.stroke" v-bind:fill="measurements.fill"></path>
+					<g  v-bind:transform="rotateText">
+						<line v-bind:x1="x1" v-bind:y1="y1" v-bind:x2="x2" v-bind:y2="y2" v-bind:stroke="attributes.stroke" v-bind:fill="attributes.fill"></line>
+						<text text-anchor="middle" v-bind:x="textX" v-bind:y="textY" v-bind:style="fontSize">{{levelRounded}}</text>
+					</g>
+				`
+			});
+			Vue.component('needle', {
+				props:['attributes'],
+				computed:{
+					rotateText: function() {
+						var rot_deg = ((this.attributes.measured-this.$parent.attributes.minimum)/(this.$parent.attributes.maximum-this.$parent.attributes.minimum))*180;
+						var rot_string = "rotate("+rot_deg+" "+this.$parent.radialCenter.x+", "+this.$parent.radialCenter.y+")";
+						return rot_string;
+					},
+					x1:function() {
+						return this.$parent.radialCenter.x;
+					},
+					y1:function() {
+						return this.$parent.radialCenter.y;
+					},
+					x2:function() {
+						return this.$parent.outerRadialMargin;
+					},
+					y2:function() {
+						return this.$parent.radialCenter.y;
+					}
+					
+				},
+				template:`
+					<line v-bind:transform="rotateText" v-bind:x1="x1" v-bind:y1="y1" v-bind:x2="x2" v-bind:y2="y2" v-bind:stroke="attributes.stroke" v-bind:fill="attributes.fill"></line>
 				`
 			});
 			
 			var test_speedo =new Vue({
 			el: '#test-speedo',
 				data: {
-					statistics: {
+					attributes: {
 						minimum: 0,
-						maximum: 1000,
-						danger_mark: 333.333,
-						warning_mark: 666.666,
-						measured: 623
+						maximum: 0.09,
+						danger_mark: 0.05,
+						warning_mark: 0.06,
+						measured: 0.081,
+						num_intervals: 9,
+						width: 500,
+						radial_size: 0.8,
+						inner_rad_size: 0.7
 					}
 				}
 			});
